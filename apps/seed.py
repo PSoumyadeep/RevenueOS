@@ -1,0 +1,13 @@
+from datetime import datetime,timezone,timedelta
+from .db import get_conn,init_db
+def seed():
+    init_db(); c=get_conn()
+    for t in ['audit_logs','recovery_cases','transactions','customers','knowledge']: c.execute(f'DELETE FROM {t}')
+    c.executemany('INSERT INTO customers VALUES(?,?,?,?,?,?,?,?,?)',[
+    ('CUS_001','Rahul Mehta','rahul@example.com','+919900000001',14,11,1,0,'upi'),('CUS_002','Ananya Sen','ananya@example.com','+919900000002',3,2,2,0,'card'),('CUS_003','Vikram Shah','vikram@example.com','+919900000003',28,24,1,1,'upi'),('CUS_004','Priya Das','priya@example.com','+919900000004',7,5,0,0,'card')])
+    now=datetime.now(timezone.utc)
+    c.executemany('INSERT INTO transactions VALUES(?,?,?,?,?,?,?,?,?,?)',[
+    ('pay_demo_001','CUS_001',12499,'INR','failed','TEMPORARY_DECLINE','Premium Annual Subscription',now.isoformat(),0,0),('pay_demo_002','CUS_002',49999,'INR','failed','NETWORK_ERROR','Pro Plan',(now-timedelta(hours=2)).isoformat(),1,0),('pay_demo_003','CUS_003',7999,'INR','failed','BANK_TIMEOUT','Monthly Subscription',(now-timedelta(hours=4)).isoformat(),0,0),('pay_demo_004','CUS_004',75000,'INR','failed','PERMANENT_DECLINE','Enterprise Upgrade',(now-timedelta(hours=6)).isoformat(),1,0),('pay_demo_005','CUS_001',2199,'INR','captured',None,'Starter Plan',(now-timedelta(days=1)).isoformat(),0,1),('pay_demo_006','CUS_003',15999,'INR','failed','TEMPORARY_DECLINE','Analytics Add-on',(now-timedelta(hours=7)).isoformat(),0,0)])
+    c.executemany('INSERT INTO knowledge(title,content,category) VALUES(?,?,?)',[
+    ('Temporary failure policy','For temporary declines, network errors and bank timeouts, one retry is permitted when the transaction is below INR 50,000. If retry fails, use a payment recovery link.','merchant_policy'),('High value policy','Transactions of INR 50,000 or more require human review before autonomous financial action.','merchant_policy'),('Recovery communication policy','A recovery link may be created after a failed payment. Do not create more than two recovery actions for one transaction.','merchant_policy'),('Idempotency policy','Every financial action needs a unique case/action identifier. Never duplicate an action after a restart.','safety'),('Historical case','Long-tenure customers with multiple successful payments and no disputes have historically recovered well after a temporary decline. Prefer one retry when policy permits.','historical_case'),('Payment failure knowledge','TEMPORARY_DECLINE, NETWORK_ERROR and BANK_TIMEOUT are potentially recoverable. PERMANENT_DECLINE should not be blindly retried.','payment_knowledge')]); c.commit(); c.close()
+if __name__=='__main__':seed()
